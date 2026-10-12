@@ -616,6 +616,7 @@
   </div>
   <div class="cards-controls">
     <select id="cardsClassFilter"></select>
+    <select id="cardsStudentFilter" style="display:none;"></select>
     <button id="printCardsBtn">طباعة</button>
   </div>
   <div id="cardsGrid"></div>
@@ -970,7 +971,14 @@ $('addClassBtn').onclick = async () => {
     return;
   }
 
-  const students = names.map(n => ({ id: uid(), name: n }));
+  // الحفاظ على معرّفات الطلاب الحاليين (حتى تبقى أكواد QR المطبوعة صالحة)؛ الأسماء الجديدة فقط تأخذ معرّفًا جديدًا
+  const pool = editingClassId
+    ? data.classes.find(c => c.id === editingClassId).students.map(s => ({ ...s }))
+    : [];
+  const students = names.map(n => {
+    const i = pool.findIndex(s => s.name === n);
+    return i >= 0 ? pool.splice(i, 1)[0] : { id: uid(), name: n };
+  });
 
   if(editingClassId){
     const c = data.classes.find(c => c.id === editingClassId);
@@ -1196,23 +1204,40 @@ $('printCardsBtn').onclick = () => window.print();
 
 function openCardsScreen(){
   const filter = $('cardsClassFilter');
+  const studentFilter = $('cardsStudentFilter');
   filter.innerHTML = '<option value="all">كل الطلاب</option>' +
     data.classes.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
   filter.value = 'all';
-  filter.onchange = () => renderCards(filter.value);
-  renderCards('all');
+  studentFilter.style.display = 'none';
+  filter.onchange = () => {
+    const cls = data.classes.find(c => c.id === filter.value);
+    if(cls){
+      studentFilter.innerHTML = '<option value="all">كل طلاب الصف</option>' +
+        cls.students.map(st => `<option value="${st.id}">${escapeHtml(st.name)}</option>`).join('');
+      studentFilter.value = 'all';
+      studentFilter.style.display = '';
+    } else {
+      studentFilter.style.display = 'none';
+    }
+    renderCards(filter.value, 'all');
+  };
+  studentFilter.onchange = () => renderCards(filter.value, studentFilter.value);
+  renderCards('all', 'all');
   $('setup').classList.remove('show');
   $('cardsScreen').classList.add('show');
 }
 
-function renderCards(filterValue){
+function renderCards(filterValue, studentId){
   const grid = $('cardsGrid');
   grid.innerHTML = '';
 
-  const students = filterValue === 'all'
+  let students = filterValue === 'all'
     ? allStudents()
     : (data.classes.find(c => c.id === filterValue)?.students || [])
         .map(s => ({...s, className: data.classes.find(c => c.id === filterValue).name}));
+  if(studentId && studentId !== 'all'){
+    students = students.filter(s => s.id === studentId);
+  }
 
   if(!students.length){
     grid.innerHTML = `<div class="empty" style="grid-column:1/-1;"><p>لا يوجد طلاب لعرضهم.</p></div>`;
