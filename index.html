@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <style>
@@ -64,6 +65,57 @@
   #pwScreen .pw-back{
     margin-top:18px; background:none; border:none; color: var(--muted);
     font-size:13px; text-decoration:underline; cursor:pointer; max-width:none; padding:4px;
+  }
+  /* ---------- Teacher class picker ---------- */
+  #classPickScreen{
+    position:fixed; inset:0; background: var(--bg); z-index: 96;
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    padding: 30px; text-align:center;
+  }
+  #classPickScreen.show{ display:flex; }
+  #classPickScreen .cp-title{ font-family:'Cairo',sans-serif; font-weight:800; font-size:20px; }
+  #classPickScreen .cp-sub{ color:var(--muted); font-size:13.5px; margin:8px 0 22px; line-height:1.8; max-width:310px; }
+  #classPickScreen .cp-row{ display:flex; gap:10px; width:100%; max-width:300px; margin-bottom:16px; }
+  #classPickScreen select{
+    flex:1; min-width:0; padding:15px 12px; border-radius:12px; font-size:16px; font-weight:700;
+    border:1px solid rgba(255,255,255,0.1); background: var(--surface); color: var(--cream);
+    font-family:'Tajawal',sans-serif; outline:none;
+  }
+  #classPickScreen select:focus{ border-color: var(--gold); }
+  #classPickScreen button.primary-btn{ max-width:300px; margin-bottom:0; }
+  #classPickScreen .cp-back{
+    margin-top:18px; background:none; border:none; color: var(--muted);
+    font-size:13px; text-decoration:underline; cursor:pointer; padding:4px;
+  }
+
+  /* ---------- Teacher attendance card (admin) ---------- */
+  #presenceCard{
+    margin: 0 16px 14px; background: var(--surface);
+    border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:10px 12px;
+  }
+  .pc-head{
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:12px; color: var(--muted); cursor:pointer; user-select:none;
+  }
+  .pc-head b{ color: var(--cream); font-family:'Cairo',sans-serif; font-size:13px; }
+  .pc-head .pc-count{ color: var(--gold-soft); font-weight:700; }
+  .pc-body{ margin-top:8px; }
+  .pc-row{ display:flex; align-items:center; gap:6px; margin-top:5px; }
+  .pc-label{ width:36px; font-size:11px; color: var(--muted); flex-shrink:0; }
+  .pc-cells{ display:grid; grid-template-columns: repeat(10, 1fr); gap:4px; flex:1; }
+  .pc-cell{
+    height:24px; border-radius:6px; background:#4A5565; color:#C3CCD8;
+    font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;
+    transition: background .35s;
+  }
+  .pc-cell.on{ background:#2E9E5B; color:#fff; }
+  .pc-cell.stale{ background:#B98A2E; color:#fff; }
+  .pc-legend{ display:flex; gap:12px; margin-top:9px; font-size:10.5px; color: var(--muted); }
+  .pc-legend i{ display:inline-block; width:9px; height:9px; border-radius:3px; margin-inline-end:4px; vertical-align:-1px; }
+  #presenceCard.collapsed .pc-body{ display:none; }
+  @media (min-width: 900px){
+    #presenceCard{ position:fixed; left:20px; top:96px; width:320px; margin:0; z-index:20; }
+    #app{ padding-left:360px; }
   }
   #roleScreen{
     position:fixed; inset:0; background: var(--bg); z-index: 100;
@@ -177,6 +229,23 @@
     z-index: 50;
   }
   #display.show{ opacity:1; pointer-events:auto; }
+  .auto-bar{ height:4px; background: var(--gold); width:0; flex-shrink:0; }
+  .auto-bar.run{ animation: autoBar var(--auto-ms, 3000ms) linear forwards; }
+  @keyframes autoBar{ from{ width:100%; } to{ width:0; } }
+
+  /* ---------- Big action buttons (supervisor) ---------- */
+  .action-row{ display:flex; gap:12px; padding: 6px 16px 14px; }
+  .big-action{
+    flex:1; min-height:104px; border-radius:20px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+    font-family:'Cairo',sans-serif; font-weight:800; font-size:21px;
+    border:2px solid rgba(212,175,55,0.45); background: var(--surface); color: var(--cream);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .big-action .ba-icon{ font-size:38px; line-height:1; }
+  .big-action:active{ transform: scale(0.97); }
+  .big-action.primary{ background: var(--gold); color:#1B1503; border-color: var(--gold); }
+  .big-action.active{ border-color: var(--gold); background: var(--surface-2); color: var(--gold-soft); }
 
   .call-topbar{
     display:flex; align-items:center; justify-content:space-between;
@@ -203,7 +272,7 @@
   }
   .call-bubble{
     background: var(--surface); border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 16px; padding: 14px 20px; text-align:center;
+    border-radius: 16px; padding: 28px 20px 14px; text-align:center; position:relative;
     opacity:0; transform: translateY(14px);
     animation: bubbleIn .4s cubic-bezier(.2,.8,.3,1) forwards;
   }
@@ -216,7 +285,7 @@
   .call-bubble.latest{
     background: linear-gradient(135deg, #1b3a52, #12283d);
     border: 2px solid var(--gold);
-    padding: 20px 22px;
+    padding: 30px 22px 20px;
   }
   .call-bubble.latest .cb-name{
     font-size: clamp(26px, 8vw, 46px); color: var(--gold-soft); font-weight:800;
@@ -227,6 +296,11 @@
     padding:3px 10px; border-radius:999px; font-weight:700; margin-bottom:8px;
   }
 
+  .call-bubble .cb-time{
+    position:absolute; top:10px; right:14px; font-size:12.5px; color: var(--muted);
+    font-family:'Tajawal',sans-serif; font-weight:500;
+  }
+  .call-bubble.latest .cb-time{ color: var(--gold-soft); }
   @keyframes bubbleIn{ to{ opacity:1; transform: translateY(0); } }
 
   @media (prefers-reduced-motion: reduce){
@@ -455,6 +529,18 @@
   <button class="pw-back" id="pwBackBtn">رجوع</button>
 </div>
 
+<div id="classPickScreen">
+  <img class="app-logo big" data-logo="light" alt="SABTRA" style="margin-bottom:10px;">
+  <div class="cp-title">حدّد صفك</div>
+  <div class="cp-sub">اختر الصف والشعبة التي تتواجد فيها الآن، ثم اضغط دخول للانتقال إلى شاشة المشاهدة.</div>
+  <div class="cp-row">
+    <select id="cpGrade"><option value="g5">الخامس</option><option value="g6">السادس</option></select>
+    <select id="cpSection"></select>
+  </div>
+  <button class="primary-btn" id="cpEnterBtn">دخول</button>
+  <button class="cp-back" id="cpBackBtn">رجوع</button>
+</div>
+
 <div id="roleScreen">
   <img class="app-logo big" data-logo="light" alt="SABTRA">
   <div class="rs-title">منصة استدعاء الطلاب</div>
@@ -468,11 +554,12 @@
     <div>
       <img class="app-logo small" data-logo="light" alt="SABTRA">
       <div class="ct-title">لوحة نداء الطلاب</div>
+      <div class="ct-count" id="tvClassLabel" style="color:var(--gold-soft); font-weight:700;"></div>
       <div class="ct-count" id="tvStatus">في انتظار أول نداء…</div>
       <div class="sync-status-pill" id="tvSyncPill"></div>
     </div>
     <div class="ct-actions">
-      <button class="ct-btn" id="tvSwitchRole" title="تبديل وضع الجهاز">⚙</button>
+      <button class="ct-btn" id="tvSwitchRole" title="تغيير الصف / وضع الجهاز">⚙</button>
     </div>
   </div>
   <div class="call-feed" id="tvFeed"></div>
@@ -486,11 +573,30 @@
       <div class="sub" id="subtitle">جارٍ التحميل…</div>
     </div>
     <div style="display:flex; gap:8px;">
-      <div class="icon-btn" id="openScan" title="مسح كود الطالب">📷</div>
+      <div class="icon-btn" id="mainSoundBtn" title="كتم/تشغيل صوت النداء">🔊</div>
       <div class="icon-btn" id="openSetup" title="إدارة الصفوف">⚙</div>
     </div>
   </header>
 
+  <div class="action-row">
+    <button class="big-action primary" id="openScan"><span class="ba-icon">📷</span>مسح الكود</button>
+    <button class="big-action" id="manualBtn"><span class="ba-icon">✋</span>اختيار يدوي</button>
+  </div>
+
+  <div id="presenceCard">
+    <div class="pc-head" id="pcHead"><b>حضور المعلمين</b><span class="pc-count" id="pcCount">0 / 20</span></div>
+    <div class="pc-body">
+      <div class="pc-row"><div class="pc-label">خامس</div><div class="pc-cells" id="pcCells5"></div></div>
+      <div class="pc-row"><div class="pc-label">سادس</div><div class="pc-cells" id="pcCells6"></div></div>
+      <div class="pc-legend">
+        <span><i style="background:#4A5565"></i>لم يدخل</span>
+        <span><i style="background:#2E9E5B"></i>متصل</span>
+        <span><i style="background:#B98A2E"></i>انقطع الاتصال</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="manualPanel" style="display:none;">
   <div class="search-wrap">
     <input type="text" id="searchInput" placeholder="ابحث عن اسم طالب…">
   </div>
@@ -504,6 +610,7 @@
   </div>
 
   <main id="listArea"></main>
+  </div>
 </div>
 
 <!-- Audience display screen -->
@@ -521,6 +628,7 @@
       <button class="ct-btn" id="backBtn" title="رجوع">→</button>
     </div>
   </div>
+  <div class="auto-bar" id="autoBar"></div>
   <div class="call-feed" id="callFeed"></div>
 </div>
 
@@ -531,6 +639,16 @@
     <div class="icon-btn" id="closeSetup">✕</div>
   </div>
   <div id="setup-body">
+    <div class="sync-section" style="border-color: rgba(212,175,55,0.3);">
+      <div class="sync-title">📋 كشف النداء اليومي</div>
+      <div class="sync-desc" id="logSummary">لم يُنادَ أحد بعد.</div>
+      <div class="sync-btns">
+        <button class="push-btn" id="exportLogBtn">📥 تنزيل كشف Excel</button>
+        <button class="pull-btn" id="resetLogBtn">🔄 يوم جديد (تصفير)</button>
+      </div>
+      <button class="all-link" id="testVoiceBtn" style="display:block;margin:12px auto 0;">🔊 تجربة صوت النداء</button>
+    </div>
+
     <div class="sync-section">
       <div class="sync-title">المزامنة بين الأجهزة</div>
       <div class="sync-desc">أدخلت البيانات على جهاز آخر (مثل اللابتوب)؟ اكتب هنا نفس رمز المزامنة واضغط "استيراد". أو ولّد رمزًا جديدًا هنا وأدخله على جهاز المشرف.</div>
@@ -564,9 +682,9 @@
     <textarea class="field" id="studentNames" placeholder="أحمد محمد&#10;سارة علي&#10;خالد ناصر"></textarea>
     <button class="primary-btn" id="addClassBtn">إضافة الصف</button>
 
-    <div class="hint" id="storageHint">تُحفظ البيانات على جهازك تلقائيًا لاستخدامها في المرات القادمة.</div>
+    <div class="hint" id="storageHint">☁️ تُحفظ الصفوف والطلاب تلقائيًا في Firebase، وتظهر على أي جهاز إدارة تفتحه.</div>
     <div class="hint" id="storageWarning" style="display:none; color:#E8A24A; border:1px solid rgba(232,162,74,0.35); background:rgba(232,162,74,0.08); padding:10px 12px; border-radius:10px;">
-      ⚠️ الحفظ التلقائي غير متاح في وضع العرض الحالي (قد يحدث هذا عند فتح الملف مباشرة خارج المحادثة). استخدم "تنزيل نسخة احتياطية" أدناه بعد كل تعديل، ثم "استيراد نسخة" على أي جهاز آخر.
+      ⚠️ الحفظ السحابي غير نشط: البيانات الحالية قد تضيع عند إغلاق الصفحة. تأكد من قواعد Firebase والاتصال بالإنترنت، وحمّل "نسخة احتياطية" أدناه بعد كل تعديل.
     </div>
 
     <div class="sync-section" style="border-color: rgba(255,255,255,0.08);">
@@ -649,47 +767,108 @@ const $ = (id) => document.getElementById(id);
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
 
-let storageAvailable = true;
+let storageAvailable = true;   // هل الحفظ الدائم يعمل (سحابي أو محلي)
+let cloudOk = false;           // هل الحفظ السحابي في Firebase يعمل
+let rosterLoaded = false;      // لا نكتب في Firebase قبل نجاح القراءة الأولى (حماية من الكتابة فوق البيانات)
+const ROSTER_PATH = 'roster';
+
+function toArr(x){ return Array.isArray(x) ? x.filter(Boolean) : (x ? Object.values(x).filter(Boolean) : []); }
+
+// Firebase يحذف المصفوفات الفارغة ويحوّل بعض المصفوفات إلى كائنات — نعيدها لشكلها الطبيعي
+function normalizeData(d){
+  return { classes: toArr(d && d.classes).map(c => ({ ...c, students: toArr(c.students) })) };
+}
+
+function cacheLocal(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }catch(e){ /* غير متاح */ }
+}
 
 async function loadData(){
-  if(typeof window.storage === 'undefined'){
-    storageAvailable = false;
-  } else {
+  let loaded = false;
+
+  // 1) المصدر الأساسي: Firebase
+  if(FIREBASE_ENABLED && fbDb){
+    try{
+      const snap = await fbDb.ref(ROSTER_PATH).get();
+      if(snap.exists()){
+        data = normalizeData(snap.val());
+        loaded = true;
+      } else {
+        // لا توجد بيانات سحابية بعد: إن وُجدت نسخة محلية نرفعها للسحابة
+        let local = null;
+        try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw) local = normalizeData(JSON.parse(raw)); }catch(e){}
+        if(local && local.classes.length){
+          data = local;
+          await fbDb.ref(ROSTER_PATH).set(JSON.parse(JSON.stringify(data)));
+        } else {
+          data = { classes: [] };
+        }
+        loaded = true;
+      }
+      rosterLoaded = true;
+      cloudOk = true;
+      cacheLocal();
+    }catch(e){ cloudOk = false; }
+  }
+
+  // 2) احتياطي: نسخة محلية على هذا الجهاز
+  if(!loaded){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){ data = normalizeData(JSON.parse(raw)); loaded = true; }
+    }catch(e){}
+  }
+
+  // 3) احتياطي أخير: تخزين المحادثة (يعمل داخل محادثة Claude فقط)
+  if(!loaded && typeof window.storage !== 'undefined'){
     try{
       const res = await window.storage.get(STORAGE_KEY, false);
-      if(res && res.value){
-        data = JSON.parse(res.value);
-      }
-    }catch(e){
-      // key not found yet is normal on first run; storage itself is still available
-    }
+      if(res && res.value){ data = normalizeData(JSON.parse(res.value)); loaded = true; }
+    }catch(e){ /* لا بيانات بعد */ }
   }
+
+  storageAvailable = cloudOk || loaded;
   updateStorageBanner();
   render();
 }
 
 function updateStorageBanner(){
-  $('storageHint').style.display = storageAvailable ? 'block' : 'none';
-  $('storageWarning').style.display = storageAvailable ? 'none' : 'block';
+  $('storageHint').style.display = cloudOk ? 'block' : 'none';
+  $('storageWarning').style.display = cloudOk ? 'none' : 'block';
 }
 
 async function saveData(){
-  if(!storageAvailable) return;
-  try{
-    const result = await window.storage.set(STORAGE_KEY, JSON.stringify(data), false);
-    if(!result){ storageAvailable = false; updateStorageBanner(); showToast('تعذّر الحفظ التلقائي — استخدم النسخة الاحتياطية'); }
-  }catch(e){
-    storageAvailable = false;
-    updateStorageBanner();
-    showToast('تعذّر الحفظ التلقائي — استخدم النسخة الاحتياطية');
+  cacheLocal();
+  const clean = JSON.parse(JSON.stringify(data)); // إزالة أي قيم undefined قبل الإرسال
+  let saved = false;
+
+  if(FIREBASE_ENABLED && fbDb){
+    if(!rosterLoaded){
+      showToast('لم يكتمل الاتصال بـ Firebase — البيانات غير محفوظة سحابيًا');
+    } else {
+      try{
+        await fbDb.ref(ROSTER_PATH).set(clean);
+        saved = true;
+        cloudOk = true;
+      }catch(e){
+        cloudOk = false;
+        showToast('تعذّر الحفظ في Firebase — تحقق من القواعد والاتصال');
+      }
+    }
   }
+
+  if(typeof window.storage !== 'undefined'){
+    try{ await window.storage.set(STORAGE_KEY, JSON.stringify(data), false); }catch(e){ /* ignore */ }
+  }
+  storageAvailable = saved || cloudOk;
+  updateStorageBanner();
 }
 
-function showToast(msg){
+function showToast(msg, ms = 1800){
   const t = $('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(()=> t.classList.remove('show'), 1800);
+  setTimeout(()=> t.classList.remove('show'), ms);
 }
 
 function allStudents(){
@@ -698,7 +877,20 @@ function allStudents(){
   return out;
 }
 
+let manualOpen = false;
+function applyManualPanel(){
+  const forced = !data.classes.length; // عند عدم وجود صفوف نُظهر اللوحة ليظهر زر الإضافة
+  $('manualPanel').style.display = (manualOpen || forced) ? 'block' : 'none';
+  $('manualBtn').classList.toggle('active', manualOpen);
+}
+$('manualBtn').onclick = () => {
+  manualOpen = !manualOpen;
+  applyManualPanel();
+  if(manualOpen) setTimeout(() => $('manualPanel').scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+};
+
 function render(){
+  applyManualPanel();
   renderSelectors();
   renderList();
   renderSetupList();
@@ -823,6 +1015,22 @@ function escapeHtml(str){
 let soundEnabled = true;
 let cachedVoices = [];
 
+// صوت قطري عالي الجودة عبر Azure Speech (اختياري). ضع المفتاح والمنطقة لتفعيله،
+// وإلا يُستخدم أفضل صوت عربي خليجي متوفر على الجهاز.
+const AZURE_TTS = { key: 'YOUR_AZURE_SPEECH_KEY', region: 'YOUR_AZURE_REGION', voice: 'ar-QA-MoazNeural' };
+const AZURE_TTS_ENABLED = AZURE_TTS.key && AZURE_TTS.key !== 'YOUR_AZURE_SPEECH_KEY';
+
+// المتصفحات (خصوصًا iPad) تمنع تشغيل الصوت قبل أول لمسة من المستخدم، لذلك "نفتح" الصوت عند أول لمسة
+const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+const ttsAudio = new Audio();
+let audioUnlocked = false;
+function unlockAudio(){
+  if(audioUnlocked) return;
+  audioUnlocked = true;
+  try{ ttsAudio.src = SILENT_WAV; const pr = ttsAudio.play(); if(pr && pr.catch) pr.catch(() => {}); }catch(e){}
+}
+document.addEventListener('pointerdown', unlockAudio, { once: true });
+
 function loadVoices(){
   if('speechSynthesis' in window){
     cachedVoices = window.speechSynthesis.getVoices();
@@ -833,45 +1041,133 @@ if('speechSynthesis' in window){
   window.speechSynthesis.onvoiceschanged = loadVoices;
 }
 
-// Prefer a Gulf/Saudi Arabic voice, then any Arabic voice, favoring names that read as male
+// الأفضلية: صوت قطري ثم خليجي (إمارات/كويت/بحرين/عُمان) ثم سعودي ثم أي عربي — مع تفضيل الأصوات الرجالية
 function pickArabicVoice(){
-  const arabicVoices = cachedVoices.filter(v => v.lang && v.lang.toLowerCase().startsWith('ar'));
-  if(!arabicVoices.length) return null;
-  const gulf = arabicVoices.filter(v => /sa|ae|kw|qa|bh|om/i.test(v.lang));
-  const pool = gulf.length ? gulf : arabicVoices;
-  const maleHints = ['maged','majed','male','hamed','tariq','tarik','rashid','omar','fahd','khalid'];
-  const male = pool.find(v => maleHints.some(h => v.name.toLowerCase().includes(h)));
-  return male || pool[0];
+  const norm = v => (v.lang || '').replace('_', '-');
+  const ar = cachedVoices.filter(v => norm(v).toLowerCase().startsWith('ar'));
+  if(!ar.length) return null;
+  const maleHints = ['maged','majed','male','hamed','tariq','tarik','rashid','omar','fahd','khalid','moaz','hamdan','saleem'];
+  const isMale = v => maleHints.some(h => v.name.toLowerCase().includes(h));
+  const tiers = [/-qa$/i, /-(ae|kw|bh|om)$/i, /-sa$/i];
+  for(const re of tiers){
+    const pool = ar.filter(v => re.test(norm(v)));
+    if(pool.length) return pool.find(isMale) || pool[0];
+  }
+  return ar.find(isMale) || ar[0];
 }
 
-function speakName(name){
-  if(!soundEnabled || !('speechSynthesis' in window)) return;
+function stopSpeech(){
+  try{ ttsAudio.pause(); }catch(e){}
+  if('speechSynthesis' in window) window.speechSynthesis.cancel();
+}
+
+function xmlEscape(t){
+  return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+
+async function azureSpeak(text){
+  const ssml = `<speak version='1.0' xml:lang='ar-QA'><voice name='${AZURE_TTS.voice}'><prosody rate='-8%'>${xmlEscape(text)}</prosody></voice></speak>`;
+  const r = await fetch(`https://${AZURE_TTS.region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
+    method: 'POST',
+    headers: {
+      'Ocp-Apim-Subscription-Key': AZURE_TTS.key,
+      'Content-Type': 'application/ssml+xml',
+      'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3'
+    },
+    body: ssml
+  });
+  if(!r.ok) throw new Error('azure tts ' + r.status);
+  const blob = await r.blob();
+  const url = URL.createObjectURL(blob);
+  ttsAudio.src = url;
+  ttsAudio.onended = () => URL.revokeObjectURL(url);
+  await ttsAudio.play();
+}
+
+function browserSpeak(name){
+  if(!('speechSynthesis' in window)) return null;
   try{
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(name);
     const voice = pickArabicVoice();
-    utter.lang = voice ? voice.lang : 'ar-SA';
+    utter.lang = voice ? voice.lang : 'ar-QA';
     if(voice) utter.voice = voice;
     utter.rate = 0.88;
     utter.pitch = 1;
     window.speechSynthesis.speak(utter);
-  }catch(e){ /* speech not available, fail silently */ }
+    return voice ? `${voice.name} (${voice.lang})` : 'الصوت الافتراضي للجهاز';
+  }catch(e){ return null; }
 }
 
-$('soundBtn').onclick = () => {
+// يعيد وصف الصوت المستخدم (للتجربة)، أو null إن لم يتوفر صوت
+async function speakName(name, force){
+  if(!soundEnabled && !force) return null;
+  stopSpeech();
+  if(AZURE_TTS_ENABLED){
+    try{ await azureSpeak(name); return 'Azure — ar-QA (قطري)'; }catch(e){ /* نكمل بصوت الجهاز */ }
+  }
+  return browserSpeak(name);
+}
+
+function setSoundIcons(){
+  const ic = soundEnabled ? '🔊' : '🔇';
+  $('soundBtn').textContent = ic;
+  $('mainSoundBtn').textContent = ic;
+}
+function toggleSound(){
   soundEnabled = !soundEnabled;
-  $('soundBtn').textContent = soundEnabled ? '🔊' : '🔇';
-  if(!soundEnabled && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+  setSoundIcons();
+  if(!soundEnabled) stopSpeech();
+}
+$('soundBtn').onclick = toggleSound;
+$('mainSoundBtn').onclick = toggleSound;
+
+$('testVoiceBtn').onclick = async () => {
+  unlockAudio();
+  const used = await speakName('محمد عبدالله الكواري', true);
+  showToast(used ? 'الصوت المستخدم: ' + used : 'لا يتوفر صوت عربي على هذا الجهاز', 4500);
 };
 
-let callLog = []; // {id, name, className}
+/* ---------- Time helpers ---------- */
+function fmtTime(ts){
+  if(!ts) return '';
+  try{ return new Date(ts).toLocaleTimeString('ar-QA', { hour: 'numeric', minute: '2-digit' }); }
+  catch(e){ return new Date(ts).toLocaleTimeString(); }
+}
+function fmtDate(ts){
+  try{ return new Date(ts).toLocaleDateString('ar-QA', { year: 'numeric', month: '2-digit', day: '2-digit' }); }
+  catch(e){ return new Date(ts).toLocaleDateString(); }
+}
+
+let callLog = []; // {id, name, className, ts}
+
+const AUTO_RETURN_MS = 3000; // مدة بقاء شاشة التأكيد قبل العودة التلقائية لشاشة الاختيار
+let autoReturnTimer = null;
+
+function closeDisplay(){
+  clearTimeout(autoReturnTimer);
+  autoReturnTimer = null;
+  $('display').classList.remove('show');
+  $('autoBar').classList.remove('run');
+}
+
+function startAutoReturn(){
+  clearTimeout(autoReturnTimer);
+  const bar = $('autoBar');
+  bar.classList.remove('run');
+  void bar.offsetWidth; // إعادة تشغيل الحركة
+  bar.style.setProperty('--auto-ms', AUTO_RETURN_MS + 'ms');
+  bar.classList.add('run');
+  autoReturnTimer = setTimeout(closeDisplay, AUTO_RETURN_MS);
+}
 
 function showStudent(name, className){
-  callLog.push({ id: uid(), name, className });
+  callLog.push({ id: uid(), name, className, ts: Date.now() });
   $('display').classList.add('show');
   renderCallLog();
   pushCallLogShared();
   setTimeout(() => speakName(name), 150);
+  startAutoReturn();
 }
 
 function renderCallLog(){
@@ -886,6 +1182,7 @@ function renderCallLog(){
       const bubble = document.createElement('div');
       bubble.className = 'call-bubble' + (isLatest ? ' latest' : '');
       bubble.innerHTML = `
+        ${entry.ts ? `<div class="cb-time">${fmtTime(entry.ts)}</div>` : ''}
         ${isLatest ? '<div class="cb-tag">الآن</div>' : ''}
         <div class="cb-name">${escapeHtml(entry.name)}</div>
         <div class="cb-class">${escapeHtml(entry.className)}</div>`;
@@ -897,21 +1194,66 @@ function renderCallLog(){
     ? `تم نداء ${callLog.length} طالب`
     : 'لم يُنادَ أحد بعد';
 
+  if($('logSummary')) $('logSummary').textContent = callLog.length
+    ? `تم نداء ${callLog.length} طالب حتى الآن.`
+    : 'لم يُنادَ أحد بعد.';
+
   feed.scrollTop = 0;
 }
 
-$('clearLogBtn').onclick = () => {
-  if(!callLog.length){ return; }
-  if(confirm('سيتم مسح سجل النداء الحالي بالكامل. هل تريد المتابعة؟')){
-    callLog = [];
-    renderCallLog();
-    pushCallLogShared();
+function exportCallLogExcel(){
+  if(!callLog.length){ showToast('لا توجد أسماء منادى عليها لتنزيلها'); return; }
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const header = ['م', 'اسم الطالب', 'الصف', 'وقت النداء', 'التاريخ'];
+  const rows = callLog.map((e, i) => [i + 1, e.name, e.className, e.ts ? fmtTime(e.ts) : '', fmtDate(e.ts || Date.now())]);
+  const aoa = [
+    [SCHOOL_NAME],
+    [ACADEMIC_YEAR + ' — كشف المناداة ليوم ' + fmtDate(Date.now())],
+    [],
+    header,
+    ...rows
+  ];
+
+  if(typeof XLSX !== 'undefined'){
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 6 }, { wch: 34 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new();
+    wb.Workbook = { Views: [{ RTL: true }] };
+    XLSX.utils.book_append_sheet(wb, ws, 'كشف النداء');
+    XLSX.writeFile(wb, `كشف-النداء-${todayStr}.xlsx`);
+  } else {
+    // احتياطي إن تعذّر تحميل مكتبة Excel: ملف CSV يفتحه Excel مباشرة
+    const csv = '\ufeff' + aoa.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `كشف-النداء-${todayStr}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
-};
+  showToast('تم تنزيل الكشف');
+}
+
+function resetCallLog(){
+  if(!callLog.length){ showToast('سجل النداء فارغ بالفعل'); return; }
+  if(confirm('هل تريد تنزيل كشف Excel قبل التصفير؟\nموافق = تنزيل الكشف أولًا')) exportCallLogExcel();
+  if(!confirm('سيتم مسح سجل النداء من شاشتك ومن شاشات كل المعلمين، وتصفير حضور المعلمين، لبدء يوم جديد. هل تريد المتابعة؟')) return;
+  callLog = [];
+  renderCallLog();
+  pushCallLogShared();
+  if(FIREBASE_ENABLED && fbDb){ try{ fbDb.ref(PRESENCE_PATH).remove().catch(() => {}); }catch(e){} }
+  showToast('تم تصفير النداء وحضور المعلمين ليوم جديد');
+}
+
+$('exportLogBtn').onclick = exportCallLogExcel;
+$('resetLogBtn').onclick = resetCallLog;
+$('clearLogBtn').onclick = resetCallLog;
 
 $('backBtn').onclick = () => {
-  $('display').classList.remove('show');
-  if('speechSynthesis' in window) window.speechSynthesis.cancel();
+  closeDisplay();
+  stopSpeech();
 };
 
 $('searchInput').addEventListener('input', renderList);
@@ -1359,6 +1701,7 @@ function renderTeacherFeed(list){
       const bubble = document.createElement('div');
       bubble.className = 'call-bubble' + (isLatest ? ' latest' : '');
       bubble.innerHTML = `
+        ${entry.ts ? `<div class="cb-time">${fmtTime(entry.ts)}</div>` : ''}
         ${isLatest ? '<div class="cb-tag">الآن</div>' : ''}
         <div class="cb-name">${escapeHtml(entry.name)}</div>
         <div class="cb-class">${escapeHtml(entry.className)}</div>`;
@@ -1408,16 +1751,133 @@ async function pollSharedCallLogFallback(){
 }
 
 /* ---------- Role / device-mode management ---------- */
+/* ---------- حضور المعلمين (Presence) ---------- */
+const PRESENCE_PATH = 'presence';
+const PRESENCE_FRESH_MS = 75000;   // أقدم من هذا = "انقطع الاتصال"
+const PRESENCE_BEAT_MS = 30000;    // نبضة كل 30 ثانية
+const VIEWER_CLASS_KEY = 'viewer-class-v1';
+let viewerClassKey = null;         // مثل g5-3
+let presenceTimer = null;
+let presenceTick = null;
+let presenceData = {};
+let serverOffset = 0;
+let presenceBuilt = false;
+
+function presenceLabel(key){
+  const [g, n] = key.split('-');
+  return (g === 'g5' ? 'الخامس' : 'السادس') + ' - ' + n;
+}
+
+// دالة نقية: on = متصل، stale = انقطع، off = لم يدخل
+function presenceStateFor(entry, serverNow){
+  if(!entry || typeof entry.ts !== 'number') return 'off';
+  return (serverNow - entry.ts) <= PRESENCE_FRESH_MS ? 'on' : 'stale';
+}
+
+/* ----- جهة المعلم ----- */
+async function writePresence(){
+  if(!(FIREBASE_ENABLED && fbDb && viewerClassKey)) return;
+  try{
+    await fbDb.ref(PRESENCE_PATH + '/' + viewerClassKey).set({ ts: firebase.database.ServerValue.TIMESTAMP });
+  }catch(e){ /* لا نزعج المعلم */ }
+}
+function startPresenceHeartbeat(){
+  stopPresenceHeartbeat(false);
+  writePresence();
+  presenceTimer = setInterval(writePresence, PRESENCE_BEAT_MS);
+}
+function stopPresenceHeartbeat(removeEntry){
+  if(presenceTimer){ clearInterval(presenceTimer); presenceTimer = null; }
+  if(removeEntry && FIREBASE_ENABLED && fbDb && viewerClassKey){
+    try{ fbDb.ref(PRESENCE_PATH + '/' + viewerClassKey).remove().catch(() => {}); }catch(e){}
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden && presenceTimer) writePresence();
+});
+
+function openClassPicker(){
+  $('app').style.display = 'none';
+  $('teacherView').classList.remove('show');
+  $('roleScreen').classList.remove('show');
+  $('pwScreen').classList.remove('show');
+  let saved = null;
+  try{ saved = localStorage.getItem(VIEWER_CLASS_KEY); }catch(e){}
+  const m = saved && saved.match(/^(g[56])-(\d{1,2})$/);
+  if(m){ $('cpGrade').value = m[1]; $('cpSection').value = m[2]; }
+  $('classPickScreen').classList.add('show');
+}
+
+$('cpSection').innerHTML = Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+$('cpEnterBtn').onclick = () => {
+  viewerClassKey = `${$('cpGrade').value}-${$('cpSection').value}`;
+  try{ localStorage.setItem(VIEWER_CLASS_KEY, viewerClassKey); }catch(e){}
+  $('classPickScreen').classList.remove('show');
+  showViewerMode();
+};
+$('cpBackBtn').onclick = () => {
+  $('classPickScreen').classList.remove('show');
+  $('roleScreen').classList.add('show');
+};
+
+/* ----- جهة المدير ----- */
+function buildPresenceCard(){
+  if(presenceBuilt) return;
+  presenceBuilt = true;
+  ['5', '6'].forEach(g => {
+    $('pcCells' + g).innerHTML = Array.from({ length: 10 }, (_, i) =>
+      `<div class="pc-cell" data-key="g${g}-${i + 1}" title="${g === '5' ? 'خامس' : 'سادس'} ${i + 1}">${i + 1}</div>`).join('');
+  });
+  $('pcHead').onclick = () => $('presenceCard').classList.toggle('collapsed');
+}
+
+function renderPresence(){
+  const now = Date.now() + serverOffset;
+  let online = 0;
+  document.querySelectorAll('.pc-cell').forEach(cell => {
+    const st = presenceStateFor(presenceData[cell.dataset.key], now);
+    cell.classList.toggle('on', st === 'on');
+    cell.classList.toggle('stale', st === 'stale');
+    if(st === 'on') online++;
+  });
+  $('pcCount').textContent = `${online} / 20`;
+}
+
+function startPresenceWatch(){
+  buildPresenceCard();
+  stopPresenceWatch();
+  if(!(FIREBASE_ENABLED && fbDb)){
+    $('pcCount').textContent = 'غير متاح';
+    return;
+  }
+  fbDb.ref('.info/serverTimeOffset').on('value', snap => { serverOffset = snap.val() || 0; });
+  fbDb.ref(PRESENCE_PATH).on('value', snap => {
+    presenceData = snap.exists() ? snap.val() : {};
+    renderPresence();
+  });
+  presenceTick = setInterval(renderPresence, 10000);
+}
+
+function stopPresenceWatch(){
+  if(presenceTick){ clearInterval(presenceTick); presenceTick = null; }
+  if(FIREBASE_ENABLED && fbDb){
+    try{ fbDb.ref(PRESENCE_PATH).off(); fbDb.ref('.info/serverTimeOffset').off(); }catch(e){}
+  }
+}
+
 function showAdminMode(){
   $('app').style.display = 'flex';
   setSyncPill($('adminSyncPill'), FIREBASE_ENABLED ? 'live' : 'offline');
   loadData();
   hydrateCallLogFromShared();
+  startPresenceWatch();
 }
 
 function showViewerMode(){
   $('teacherView').classList.add('show');
+  $('tvClassLabel').textContent = viewerClassKey ? presenceLabel(viewerClassKey) : '';
   startViewerSync();
+  startPresenceHeartbeat();
 }
 
 const ADMIN_PASSWORD_HASH = '059a50ce956b7ec61527c7ecc0c55b5a009dc54ab4acddce8852b46baa2aba30'; // كلمة المرور الافتراضية: Admin2026
@@ -1484,7 +1944,8 @@ async function proceedWithRole(role){
       await window.storage.set(ROLE_KEY, role, false);
     }
   }catch(e){ /* role just won't be remembered next time */ }
-  if(role === 'admin') showAdminMode(); else showViewerMode();
+  try{ localStorage.setItem(ROLE_KEY, role); }catch(e){}
+  if(role === 'admin') showAdminMode(); else openClassPicker();
 }
 
 async function submitAdminPassword(){
@@ -1517,6 +1978,11 @@ $('savePwBtn').onclick = async () => {
 function switchRole(){
   if(!confirm('سيتم الرجوع لاختيار نوع هذا الجهاز من جديد. هل تريد المتابعة؟')) return;
   appRole = null;
+  stopPresenceHeartbeat(true);
+  viewerClassKey = null;
+  stopPresenceWatch();
+  $('classPickScreen').classList.remove('show');
+  try{ localStorage.removeItem(ROLE_KEY); }catch(e){}
   if(viewerPollTimer){ clearInterval(viewerPollTimer); viewerPollTimer = null; }
   if(fbListenerAttached && fbDb){ fbDb.ref(CALL_LOG_PATH).off(); fbListenerAttached = false; }
   $('app').style.display = 'none';
@@ -1552,9 +2018,10 @@ async function initApp(){
       if(res && res.value){ appRole = res.value; }
     }
   }catch(e){ /* no saved role yet */ }
+  if(!appRole){ try{ appRole = localStorage.getItem(ROLE_KEY); }catch(e){} }
 
   if(appRole === 'admin') showAdminMode();
-  else if(appRole === 'viewer') showViewerMode();
+  else if(appRole === 'viewer') openClassPicker();
   else $('roleScreen').classList.add('show');
 }
 
