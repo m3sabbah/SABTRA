@@ -89,7 +89,7 @@
   }
 
   /* ---------- Teacher attendance card (admin) ---------- */
-  #presenceCard{
+  .presence-card{
     margin: 0 16px 14px; background: var(--surface);
     border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:10px 12px;
   }
@@ -112,10 +112,16 @@
   .pc-cell.stale{ background:#B98A2E; color:#fff; }
   .pc-legend{ display:flex; gap:12px; margin-top:9px; font-size:10.5px; color: var(--muted); }
   .pc-legend i{ display:inline-block; width:9px; height:9px; border-radius:3px; margin-inline-end:4px; vertical-align:-1px; }
-  #presenceCard.collapsed .pc-body{ display:none; }
+  .presence-card.collapsed .pc-body{ display:none; }
+  .pc-cell.mine{ outline:2px solid var(--gold); outline-offset:1px; }
   @media (min-width: 900px){
-    #presenceCard{ position:fixed; left:20px; top:96px; width:320px; margin:0; z-index:20; }
+    #presenceCard, #tvPresenceCard{ position:fixed; left:20px; top:96px; width:320px; margin:0; z-index:20; }
     #app{ padding-left:360px; }
+    #teacherView .call-feed{ padding-left:360px; }
+  }
+  .scan-diag{
+    position:absolute; bottom:26px; left:0; right:0; text-align:center; padding:0 16px;
+    font-size:11.5px; color: rgba(244,241,234,0.65); z-index:2;
   }
   #roleScreen{
     position:fixed; inset:0; background: var(--bg); z-index: 100;
@@ -280,7 +286,7 @@
     font-family:'Cairo', sans-serif; font-weight:700;
     font-size: clamp(18px, 5vw, 26px); line-height:1.3;
   }
-  .call-bubble .cb-class{ font-size:12.5px; color: var(--muted); margin-top:4px; }
+  .call-bubble .cb-class{ font-size:18px; color:#B7C6D8; margin-top:6px; font-weight:500; }
 
   .call-bubble.latest{
     background: linear-gradient(135deg, #1b3a52, #12283d);
@@ -290,7 +296,7 @@
   .call-bubble.latest .cb-name{
     font-size: clamp(26px, 8vw, 46px); color: var(--gold-soft); font-weight:800;
   }
-  .call-bubble.latest .cb-class{ color: var(--gold-soft); opacity:0.85; }
+  .call-bubble.latest .cb-class{ color: var(--gold-soft); font-size:23px; font-weight:700; }
   .call-bubble.latest .cb-tag{
     display:inline-block; font-size:10.5px; color:#1B1503; background: var(--gold);
     padding:3px 10px; border-radius:999px; font-weight:700; margin-bottom:8px;
@@ -559,9 +565,11 @@
       <div class="sync-status-pill" id="tvSyncPill"></div>
     </div>
     <div class="ct-actions">
+      <button class="ct-btn gold" id="tvSoundBtn" title="تشغيل/كتم صوت النداء">🔊</button>
       <button class="ct-btn" id="tvSwitchRole" title="تغيير الصف / وضع الجهاز">⚙</button>
     </div>
   </div>
+  <div class="presence-card" id="tvPresenceCard"></div>
   <div class="call-feed" id="tvFeed"></div>
 </div>
 
@@ -573,7 +581,6 @@
       <div class="sub" id="subtitle">جارٍ التحميل…</div>
     </div>
     <div style="display:flex; gap:8px;">
-      <div class="icon-btn" id="mainSoundBtn" title="كتم/تشغيل صوت النداء">🔊</div>
       <div class="icon-btn" id="openSetup" title="إدارة الصفوف">⚙</div>
     </div>
   </header>
@@ -583,18 +590,7 @@
     <button class="big-action" id="manualBtn"><span class="ba-icon">✋</span>اختيار يدوي</button>
   </div>
 
-  <div id="presenceCard">
-    <div class="pc-head" id="pcHead"><b>حضور المعلمين</b><span class="pc-count" id="pcCount">0 / 20</span></div>
-    <div class="pc-body">
-      <div class="pc-row"><div class="pc-label">خامس</div><div class="pc-cells" id="pcCells5"></div></div>
-      <div class="pc-row"><div class="pc-label">سادس</div><div class="pc-cells" id="pcCells6"></div></div>
-      <div class="pc-legend">
-        <span><i style="background:#4A5565"></i>لم يدخل</span>
-        <span><i style="background:#2E9E5B"></i>متصل</span>
-        <span><i style="background:#B98A2E"></i>انقطع الاتصال</span>
-      </div>
-    </div>
-  </div>
+  <div class="presence-card" id="presenceCard"></div>
 
   <div id="manualPanel" style="display:none;">
   <div class="search-wrap">
@@ -623,7 +619,6 @@
       <div class="sync-status-pill" id="adminSyncPill"></div>
     </div>
     <div class="ct-actions">
-      <button class="ct-btn gold" id="soundBtn" title="كتم/تشغيل الصوت">🔊</button>
       <button class="ct-btn" id="clearLogBtn" title="مسح السجل">🗑</button>
       <button class="ct-btn" id="backBtn" title="رجوع">→</button>
     </div>
@@ -646,7 +641,6 @@
         <button class="push-btn" id="exportLogBtn">📥 تنزيل كشف Excel</button>
         <button class="pull-btn" id="resetLogBtn">🔄 يوم جديد (تصفير)</button>
       </div>
-      <button class="all-link" id="testVoiceBtn" style="display:block;margin:12px auto 0;">🔊 تجربة صوت النداء</button>
     </div>
 
     <div class="sync-section">
@@ -719,6 +713,7 @@
   <video id="scanVideo" muted playsinline autoplay></video>
   <div class="scan-frame"></div>
   <div class="scan-status" id="scanStatus">وجّه الكاميرا نحو كود الطالب</div>
+  <div class="scan-diag" id="scanDiag"></div>
   <div class="scan-error" id="scanError">
     <div style="font-size:36px;">📷</div>
     <p id="scanErrorMsg">تعذّر الوصول إلى الكاميرا. تأكد من منح إذن الكاميرا للمتصفح، أو اختر الطالب يدويًا من القائمة.</p>
@@ -1110,23 +1105,29 @@ async function speakName(name, force){
 }
 
 function setSoundIcons(){
-  const ic = soundEnabled ? '🔊' : '🔇';
-  $('soundBtn').textContent = ic;
-  $('mainSoundBtn').textContent = ic;
+  $('tvSoundBtn').textContent = soundEnabled ? '🔊' : '🔇';
 }
 function toggleSound(){
+  unlockAudio();
   soundEnabled = !soundEnabled;
   setSoundIcons();
   if(!soundEnabled) stopSpeech();
+  else speakName('تم تشغيل صوت النداء');
 }
-$('soundBtn').onclick = toggleSound;
-$('mainSoundBtn').onclick = toggleSound;
+$('tvSoundBtn').onclick = toggleSound;
 
-$('testVoiceBtn').onclick = async () => {
+// تهيئة الصوت داخل لمسة المستخدم (شرط في iPad وSafari)
+function primeSpeech(){
   unlockAudio();
-  const used = await speakName('محمد عبدالله الكواري', true);
-  showToast(used ? 'الصوت المستخدم: ' + used : 'لا يتوفر صوت عربي على هذا الجهاز', 4500);
-};
+  try{
+    if('speechSynthesis' in window){
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      window.speechSynthesis.speak(u);
+    }
+  }catch(e){}
+}
+
 
 /* ---------- Time helpers ---------- */
 function fmtTime(ts){
@@ -1166,7 +1167,6 @@ function showStudent(name, className){
   $('display').classList.add('show');
   renderCallLog();
   pushCallLogShared();
-  setTimeout(() => speakName(name), 150);
   startAutoReturn();
 }
 
@@ -1471,7 +1471,11 @@ function findStudentById(id){
 
 /* ---------- QR camera scanning ---------- */
 let scanStream = null;
-let scanRAF = null;
+let scanTimer = null;
+let scanBusy = false;
+let scanDetector = null;
+let scanEngine = '';
+let lastScanText = '', lastScanAt = 0;
 const scanVideo = $('scanVideo');
 const scanCanvas = document.createElement('canvas');
 const scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
@@ -1480,22 +1484,64 @@ $('openScan').onclick = openScan;
 $('scanCloseBtn').onclick = closeScan;
 $('scanErrorClose').onclick = closeScan;
 
+function loadScriptOnce(src){
+  return new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = src; el.onload = resolve; el.onerror = reject;
+    document.head.appendChild(el);
+  });
+}
+
+// إن لم تُحمَّل مكتبة القراءة من المصدر الأول نجرّب مصادر بديلة
+async function ensureJsQR(){
+  if(typeof jsQR === 'function') return true;
+  const sources = [
+    'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js',
+    'https://unpkg.com/jsqr@1.4.0/dist/jsQR.js'
+  ];
+  for(const src of sources){
+    try{ await loadScriptOnce(src); if(typeof jsQR === 'function') return true; }catch(e){}
+  }
+  return typeof jsQR === 'function';
+}
+
 async function openScan(){
   $('scanScreen').classList.add('show');
   $('scanError').classList.remove('show');
   $('scanStatus').textContent = 'وجّه الكاميرا نحو كود الطالب';
+  $('scanDiag').textContent = 'جارٍ تجهيز القارئ…';
 
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    showScanError('المتصفح الحالي لا يدعم الوصول إلى الكاميرا. جرّب فتح الملف مباشرة داخل Safari.');
+    showScanError('المتصفح الحالي لا يدعم الوصول إلى الكاميرا. افتح الرابط من Safari أو Chrome.');
     return;
   }
+
+  // محرك القراءة: BarcodeDetector المدمج إن وُجد، وإلا مكتبة jsQR
+  scanDetector = null; scanEngine = '';
+  if('BarcodeDetector' in window){
+    try{
+      const formats = await BarcodeDetector.getSupportedFormats();
+      if(formats.includes('qr_code')){ scanDetector = new BarcodeDetector({ formats: ['qr_code'] }); scanEngine = 'BarcodeDetector'; }
+    }catch(e){}
+  }
+  if(!scanDetector){
+    const ok = await ensureJsQR();
+    if(!ok){ showScanError('تعذّر تحميل مكتبة قراءة الأكواد. تأكد من اتصال الإنترنت ثم أعد المحاولة، أو استخدم الاختيار اليدوي.'); return; }
+    scanEngine = 'jsQR';
+  }
+
   try{
-    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
     scanVideo.srcObject = scanStream;
     await scanVideo.play();
-    scanRAF = requestAnimationFrame(scanLoop);
+    $('scanDiag').textContent = `الكاميرا تعمل (${scanVideo.videoWidth}×${scanVideo.videoHeight}) • ${scanEngine} • ${allStudents().length} طالب محمّل`;
+    scanTimer = setTimeout(scanTick, 100);
   }catch(e){
-    showScanError('تعذّر الوصول إلى الكاميرا. تأكد من السماح بإذن الكاميرا لهذا التطبيق من إعدادات المتصفح، أو استخدم الاختيار اليدوي من القائمة.');
+    showScanError('تعذّر الوصول إلى الكاميرا. اسمح للمتصفح باستخدام الكاميرا لهذا الموقع من الإعدادات، أو استخدم الاختيار اليدوي.');
   }
 }
 
@@ -1506,34 +1552,77 @@ function showScanError(msg){
 
 function closeScan(){
   $('scanScreen').classList.remove('show');
-  if(scanRAF) cancelAnimationFrame(scanRAF);
-  scanRAF = null;
+  if(scanTimer){ clearTimeout(scanTimer); scanTimer = null; }
+  scanBusy = false;
   if(scanStream){
     scanStream.getTracks().forEach(t => t.stop());
     scanStream = null;
   }
 }
 
-function scanLoop(){
-  if(scanVideo.readyState === scanVideo.HAVE_ENOUGH_DATA){
-    scanCanvas.width = scanVideo.videoWidth;
-    scanCanvas.height = scanVideo.videoHeight;
-    scanCtx.drawImage(scanVideo, 0, 0, scanCanvas.width, scanCanvas.height);
-    const imgData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
-    const code = window.jsQR ? jsQR(imgData.data, imgData.width, imgData.height) : null;
-    if(code && code.data && code.data.startsWith(QR_PREFIX)){
-      const id = code.data.slice(QR_PREFIX.length);
-      const student = findStudentById(id);
-      if(student){
-        closeScan();
-        showStudent(student.name, student.className);
-        return;
+async function scanTick(){
+  if(!scanStream) return;
+  if(!scanBusy && scanVideo.readyState >= 2 && scanVideo.videoWidth){
+    scanBusy = true;
+    try{
+      let text = null;
+      if(scanDetector){
+        const codes = await scanDetector.detect(scanVideo);
+        if(codes.length) text = codes[0].rawValue;
       } else {
-        $('scanStatus').textContent = 'الكود لا يطابق أي طالب في هذا الجهاز — تحقّق من المزامنة';
+        const vw = scanVideo.videoWidth, vh = scanVideo.videoHeight;
+        const scale = Math.min(1, 960 / vw);
+        const w = Math.round(vw * scale), h = Math.round(vh * scale);
+        if(scanCanvas.width !== w || scanCanvas.height !== h){ scanCanvas.width = w; scanCanvas.height = h; }
+        scanCtx.drawImage(scanVideo, 0, 0, w, h);
+        const img = scanCtx.getImageData(0, 0, w, h);
+        const code = jsQR(img.data, w, h, { inversionAttempts: 'attemptBoth' });
+        if(code && code.data) text = code.data;
       }
-    }
+      if(text){
+        const done = await handleScanned(text);
+        if(done) return;
+      }
+    }catch(e){ /* نتجاهل إطارًا فاشلًا ونكمل */ }
+    scanBusy = false;
   }
-  scanRAF = requestAnimationFrame(scanLoop);
+  if(scanStream) scanTimer = setTimeout(scanTick, 90);
+}
+
+// يبحث عن الطالب محليًا، وإن لم يجده يجلب أحدث قائمة من Firebase ويحاول مرة أخرى
+async function findStudentRemote(id){
+  if(!(FIREBASE_ENABLED && fbDb)) return null;
+  try{
+    const snap = await fbDb.ref(ROSTER_PATH).get();
+    if(!snap.exists()) return null;
+    data = normalizeData(snap.val());
+    rosterLoaded = true;
+    cacheLocal();
+    render();
+    return findStudentById(id);
+  }catch(e){ return null; }
+}
+
+async function handleScanned(text){
+  const now = Date.now();
+  if(text === lastScanText && now - lastScanAt < 1500) return false; // نفس الكود قبل لحظات
+  lastScanText = text; lastScanAt = now;
+
+  if(!text.startsWith(QR_PREFIX)){
+    $('scanStatus').textContent = 'قُرئ كود لا يخص البرنامج: ' + text.slice(0, 24);
+    return false;
+  }
+  const id = text.slice(QR_PREFIX.length);
+  let student = findStudentById(id);
+  if(!student) student = await findStudentRemote(id);
+  if(student){
+    try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){}
+    closeScan();
+    showStudent(student.name, student.className);
+    return true;
+  }
+  $('scanStatus').textContent = `كود غير مسجَّل (${id}) — عدد الطلاب المحمّلين: ${allStudents().length}`;
+  return false;
 }
 
 /* ---------- Printable QR cards ---------- */
@@ -1711,11 +1800,23 @@ function renderTeacherFeed(list){
   $('tvStatus').textContent = list.length ? `تم نداء ${list.length} طالب` : 'في انتظار أول نداء…';
 }
 
+let viewerSeen = null; // معرّفات النداءات التي رآها هذا الجهاز (لنطق الجديد فقط)
+function handleNewCalls(list){
+  if(viewerSeen === null){ viewerSeen = new Set(list.map(e => e && e.id)); return; } // أول تحميل: لا ننطق السجل القديم
+  if(!list.length){ viewerSeen.clear(); return; }
+  const fresh = list.filter(e => e && !viewerSeen.has(e.id));
+  fresh.forEach(e => viewerSeen.add(e.id));
+  if(fresh.length) speakName(fresh[fresh.length - 1].name);
+}
+
 function startViewerSync(){
+  viewerSeen = null;
+  viewerLastCount = -1;
   if(FIREBASE_ENABLED && fbDb){
     fbDb.ref(CALL_LOG_PATH).on('value', (snap) => {
       const remote = snap.exists() ? snap.val() : [];
       const list = Array.isArray(remote) ? remote : [];
+      handleNewCalls(list);
       if(list.length !== viewerLastCount){
         viewerLastCount = list.length;
         renderTeacherFeed(list);
@@ -1779,7 +1880,14 @@ async function writePresence(){
   if(!(FIREBASE_ENABLED && fbDb && viewerClassKey)) return;
   try{
     await fbDb.ref(PRESENCE_PATH + '/' + viewerClassKey).set({ ts: firebase.database.ServerValue.TIMESTAMP });
-  }catch(e){ /* لا نزعج المعلم */ }
+    setTvLabel(true);
+  }catch(e){
+    setTvLabel(false); // نُظهر التحذير ليعرف المعلم/المدير أن التسجيل لم يتم
+  }
+}
+function setTvLabel(ok){
+  const base = viewerClassKey ? presenceLabel(viewerClassKey) : '';
+  $('tvClassLabel').textContent = ok === false ? base + ' — ⚠️ تعذّر تسجيل حضورك' : base;
 }
 function startPresenceHeartbeat(){
   stopPresenceHeartbeat(false);
@@ -1810,6 +1918,7 @@ function openClassPicker(){
 
 $('cpSection').innerHTML = Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
 $('cpEnterBtn').onclick = () => {
+  primeSpeech();
   viewerClassKey = `${$('cpGrade').value}-${$('cpSection').value}`;
   try{ localStorage.setItem(VIEWER_CLASS_KEY, viewerClassKey); }catch(e){}
   $('classPickScreen').classList.remove('show');
@@ -1820,41 +1929,56 @@ $('cpBackBtn').onclick = () => {
   $('roleScreen').classList.add('show');
 };
 
-/* ----- جهة المدير ----- */
-function buildPresenceCard(){
-  if(presenceBuilt) return;
-  presenceBuilt = true;
-  ['5', '6'].forEach(g => {
-    $('pcCells' + g).innerHTML = Array.from({ length: 10 }, (_, i) =>
-      `<div class="pc-cell" data-key="g${g}-${i + 1}" title="${g === '5' ? 'خامس' : 'سادس'} ${i + 1}">${i + 1}</div>`).join('');
+/* ----- عرض الحضور (بطاقة للمدير وأخرى للمعلم) ----- */
+function presenceCardHtml(){
+  const row = (g, label) =>
+    `<div class="pc-row"><div class="pc-label">${label}</div><div class="pc-cells">` +
+    Array.from({ length: 10 }, (_, i) => `<div class="pc-cell" data-key="g${g}-${i + 1}" title="${label} ${i + 1}">${i + 1}</div>`).join('') +
+    `</div></div>`;
+  return `<div class="pc-head"><b>حضور المعلمين</b><span class="pc-count">0 / 20</span></div>
+    <div class="pc-body">${row(5, 'خامس')}${row(6, 'سادس')}
+      <div class="pc-legend">
+        <span><i style="background:#4A5565"></i>لم يدخل</span>
+        <span><i style="background:#2E9E5B"></i>متصل</span>
+        <span><i style="background:#B98A2E"></i>انقطع الاتصال</span>
+      </div></div>`;
+}
+function mountPresenceCards(){
+  ['presenceCard', 'tvPresenceCard'].forEach(id => {
+    const el = $(id);
+    if(!el) return;
+    el.innerHTML = presenceCardHtml();
+    el.querySelector('.pc-head').onclick = () => el.classList.toggle('collapsed');
   });
-  $('pcHead').onclick = () => $('presenceCard').classList.toggle('collapsed');
+}
+mountPresenceCards();
+
+function setPresenceCounts(text){
+  document.querySelectorAll('.pc-count').forEach(c => { c.textContent = text; });
 }
 
 function renderPresence(){
   const now = Date.now() + serverOffset;
   let online = 0;
   document.querySelectorAll('.pc-cell').forEach(cell => {
-    const st = presenceStateFor(presenceData[cell.dataset.key], now);
+    const key = cell.dataset.key;
+    const st = presenceStateFor(presenceData[key], now);
     cell.classList.toggle('on', st === 'on');
     cell.classList.toggle('stale', st === 'stale');
+    cell.classList.toggle('mine', key === viewerClassKey);
     if(st === 'on') online++;
   });
-  $('pcCount').textContent = `${online} / 20`;
+  setPresenceCounts(`${online} / 20`);
 }
 
 function startPresenceWatch(){
-  buildPresenceCard();
   stopPresenceWatch();
-  if(!(FIREBASE_ENABLED && fbDb)){
-    $('pcCount').textContent = 'غير متاح';
-    return;
-  }
+  if(!(FIREBASE_ENABLED && fbDb)){ setPresenceCounts('غير متاح'); return; }
   fbDb.ref('.info/serverTimeOffset').on('value', snap => { serverOffset = snap.val() || 0; });
   fbDb.ref(PRESENCE_PATH).on('value', snap => {
     presenceData = snap.exists() ? snap.val() : {};
     renderPresence();
-  });
+  }, () => { setPresenceCounts('⚠️ تعذّر الاتصال'); });
   presenceTick = setInterval(renderPresence, 10000);
 }
 
@@ -1875,8 +1999,9 @@ function showAdminMode(){
 
 function showViewerMode(){
   $('teacherView').classList.add('show');
-  $('tvClassLabel').textContent = viewerClassKey ? presenceLabel(viewerClassKey) : '';
+  setTvLabel(true);
   startViewerSync();
+  startPresenceWatch();
   startPresenceHeartbeat();
 }
 
