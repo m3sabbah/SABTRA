@@ -113,6 +113,17 @@
   .pc-legend{ display:flex; gap:12px; margin-top:9px; font-size:10.5px; color: var(--muted); }
   .pc-legend i{ display:inline-block; width:9px; height:9px; border-radius:3px; margin-inline-end:4px; vertical-align:-1px; }
   .presence-card.collapsed .pc-body{ display:none; }
+  .tv-filter{ display:flex; justify-content:center; padding:10px 16px 6px; flex-shrink:0; }
+  .tv-filter .seg{
+    display:flex; gap:4px; width:100%; max-width:430px; padding:4px; border-radius:14px;
+    background: var(--surface); border:1px solid rgba(212,175,55,0.35);
+  }
+  .tv-filter button{
+    flex:1; padding:12px 8px; border:none; border-radius:10px; background:transparent;
+    color: var(--muted); font-family:'Cairo',sans-serif; font-weight:800; font-size:14.5px;
+    cursor:pointer; white-space:nowrap;
+  }
+  .tv-filter button.active{ background: var(--gold); color:#1B1503; }
   .pc-cell.mine{ outline:2px solid var(--gold); outline-offset:1px; }
   @media (min-width: 900px){
     #presenceCard, #tvPresenceCard{ position:fixed; left:20px; top:96px; width:320px; margin:0; z-index:20; }
@@ -567,6 +578,12 @@
     <div class="ct-actions">
       <button class="ct-btn gold" id="tvSoundBtn" title="تشغيل/كتم صوت النداء">🔊</button>
       <button class="ct-btn" id="tvSwitchRole" title="تغيير الصف / وضع الجهاز">⚙</button>
+    </div>
+  </div>
+  <div class="tv-filter">
+    <div class="seg">
+      <button id="tvAllBtn" class="active">جميع الطلاب</button>
+      <button id="tvClassBtn">طلاب الصف</button>
     </div>
   </div>
   <div class="presence-card" id="tvPresenceCard"></div>
@@ -1779,14 +1796,33 @@ async function hydrateCallLogFromShared(){
 }
 
 /* ---------- Teacher viewer mode ---------- */
+let viewerFilter = 'all';   // 'all' | 'class'
+let viewerList = [];
+
+// يستخرج مفتاح الصف (مثل g5-4) من اسمه المخزّن في سجل النداء — يعمل مع الصيغتين القديمة والجديدة
+function classKeyFromName(name){
+  const n = String(name || '').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+  const g = n.includes('الخامس') ? 'g5' : (n.includes('السادس') ? 'g6' : null);
+  const m = n.match(/(\d+)\s*$/);
+  return (g && m) ? `${g}-${parseInt(m[1], 10)}` : null;
+}
+function isMyClassEntry(entry){
+  return !!viewerClassKey && classKeyFromName(entry.className) === viewerClassKey;
+}
+
 function renderTeacherFeed(list){
+  viewerList = list;
+  const mine = list.filter(isMyClassEntry);
+  const shown = viewerFilter === 'class' ? mine : list;
+  const latest = list[list.length - 1];
   const feed = $('tvFeed');
   feed.innerHTML = '';
-  if(!list.length){
-    feed.innerHTML = `<div class="call-empty">لم يُنادَ أي طالب بعد</div>`;
+
+  if(!shown.length){
+    feed.innerHTML = `<div class="call-empty">${viewerFilter === 'class' ? 'لم يُنادَ أحد من صفك بعد' : 'لم يُنادَ أي طالب بعد'}</div>`;
   } else {
-    [...list].reverse().forEach((entry, i) => {
-      const isLatest = i === 0;
+    [...shown].reverse().forEach(entry => {
+      const isLatest = entry === latest; // وسم "الآن" لآخر نداء عام فقط
       const bubble = document.createElement('div');
       bubble.className = 'call-bubble' + (isLatest ? ' latest' : '');
       bubble.innerHTML = `
@@ -1797,8 +1833,18 @@ function renderTeacherFeed(list){
       feed.appendChild(bubble);
     });
   }
-  $('tvStatus').textContent = list.length ? `تم نداء ${list.length} طالب` : 'في انتظار أول نداء…';
+
+  $('tvAllBtn').textContent = `جميع الطلاب (${list.length})`;
+  $('tvClassBtn').textContent = `طلاب الصف (${mine.length})`;
+  $('tvAllBtn').classList.toggle('active', viewerFilter === 'all');
+  $('tvClassBtn').classList.toggle('active', viewerFilter === 'class');
+  $('tvStatus').textContent = viewerFilter === 'class'
+    ? `من صفك: ${mine.length} من ${list.length}`
+    : (list.length ? `تم نداء ${list.length} طالب` : 'في انتظار أول نداء…');
 }
+
+$('tvAllBtn').onclick = () => { viewerFilter = 'all'; renderTeacherFeed(viewerList); $('tvFeed').scrollTop = 0; };
+$('tvClassBtn').onclick = () => { viewerFilter = 'class'; renderTeacherFeed(viewerList); $('tvFeed').scrollTop = 0; };
 
 let viewerSeen = null; // معرّفات النداءات التي رآها هذا الجهاز (لنطق الجديد فقط)
 function handleNewCalls(list){
